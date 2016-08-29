@@ -1,8 +1,8 @@
 package http_server;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.logging.Level;
 
 public class Utility {
 
@@ -16,6 +16,20 @@ public class Utility {
 	@SuppressWarnings("unchecked")
 	public static HashMap<ResponseHeaderField, String> getDefaultResponseHeaderField() {
 		return (HashMap<ResponseHeaderField, String>) defaultResponseHeaderField.clone();
+	}
+
+	public static ArrayList<String> splitPath(String path) {
+		ArrayList<String> list = new ArrayList<String>();
+		int j;
+		for (int i = 0; i < path.length(); i = j+1) {
+			j = path.indexOf('/', i);
+			if (j == -1)
+				j = path.length();
+			String file = path.substring(i, j);
+			if (!file.isEmpty())
+				list.add(file);
+		}
+		return list;
 	}
 
 	public static void init() {
