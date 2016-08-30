@@ -115,17 +115,7 @@ public class ServerWorker implements Runnable {
 		}
 		// generate uriPath
 		String uriPath = uri.getPath();
-		int i = 1;
-		int j;
-		while (i < uriPath.length()) {
-			j = uriPath.indexOf('/', i);
-			if (j == -1)
-				j = uriPath.length();
-			String dir = uriPath.substring(i, j);
-			if (!dir.isEmpty())
-				req.uriPath.add(dir);
-			i = j + 1;
-		}
+		req.uriPath = Utility.splitPath(uriPath);
 		// parse query
 		parseURIQuery(uri);
 	}

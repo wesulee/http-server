@@ -45,16 +45,15 @@ public class Response {
 		headerFields.put(ResponseHeaderField.CONTENT_TYPE, type);
 	}
 
-	public void sendHTML(String content) throws IOException {
-		setContentType("text/html");
-		send(content);
+	public void setContentLength(int length) {
+		headerFields.put(ResponseHeaderField.CONTENT_LENGTH, String.valueOf(length));
 	}
 
-	public void send(String content) throws IOException {
-		byte[] contentBytes = content.getBytes(Utility.charsetUTF8);
-		headerFields.put(ResponseHeaderField.CONTENT_LENGTH, String.valueOf(contentBytes.length));
+	public void send(byte[] content, String contentType) throws IOException {
+		setContentType(contentType);
+		setContentLength(content.length);
 		sendHeader();
-		req.out.write(contentBytes);
+		req.out.write(content);
 	}
 
 	public void send() throws IOException {

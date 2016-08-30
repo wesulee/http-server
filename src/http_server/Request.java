@@ -12,7 +12,7 @@ public class Request {
 	public OutputStream out = null;
 	public RequestMethod method = RequestMethod.INVALID;
 	public String URI = null;	// request-URI
-	public final ArrayList<String> uriPath;
+	public ArrayList<String> uriPath = null;
 	public final HashMap<String, String> queryParam;
 	public final HashMap<RequestHeaderField, String> headerFields;
 	public int versionMajor = 0;
@@ -20,7 +20,6 @@ public class Request {
 
 	public Request(Socket conn) {
 		this.conn = conn;
-		this.uriPath = new ArrayList<String>();
 		this.queryParam = new HashMap<String, String>();
 		this.headerFields = new HashMap<RequestHeaderField, String>();
 	}

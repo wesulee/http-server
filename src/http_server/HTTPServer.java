@@ -34,7 +34,7 @@ public class HTTPServer {
 		Utility.init();
 	}
 
-	public void addHandler(String context, TestHandler handler) throws RuntimeException {
+	public void addHandler(String context, RequestHandler handler) throws RuntimeException {
 		if (!running) {
 			matcher.add(context, handler);
 		}
@@ -44,7 +44,6 @@ public class HTTPServer {
 	}
 
 	public void run() {
-
 		ExecutorService executor = Executors.newCachedThreadPool();
 		running = true;
 		while (true) {
@@ -79,7 +78,16 @@ public class HTTPServer {
 		HTTPServer server = null;
 		try {
 			server = new HTTPServer(".", 80);
-			server.addHandler("/", new TestHandler());
+			String defaultContent = "<!DOCTYPE html>\n" +
+					"<html>\n" +
+					"<body>\n" +
+					"<h1>Hello World</h1>\n" +
+					"</body>\n" +
+					"</html>";
+			server.addHandler(
+				"/",
+				new StaticHandler(defaultContent.getBytes(Utility.charsetUTF8), MediaType.HTML.toString())
+			);
 		}
 		catch (Exception e) {
 			System.err.println("unable to start server: " + e);
