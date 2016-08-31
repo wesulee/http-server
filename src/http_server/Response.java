@@ -1,12 +1,17 @@
 package http_server;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 
 public class Response {
 
+	private static final int FILE_BUFFER_SZ = 8*1024;
 	private final Request req;
 	public StatusCode statusCode = StatusCode._UNKNOWN;
 	public HashMap<ResponseHeaderField, String> headerFields;
@@ -45,7 +50,11 @@ public class Response {
 		headerFields.put(ResponseHeaderField.CONTENT_TYPE, type);
 	}
 
-	public void setContentLength(int length) {
+	public void setContentType(File f) {
+		setContentType(Utility.MIMEType.get(f));
+	}
+
+	public void setContentLength(long length) {
 		headerFields.put(ResponseHeaderField.CONTENT_LENGTH, String.valueOf(length));
 	}
 
@@ -58,6 +67,28 @@ public class Response {
 
 	public void send() throws IOException {
 		sendHeader();
+	}
+
+	public void send(File f) {
+		HTTPServer.INSTANCE.getLogger().log(Level.INFO, "serving file " + f.getAbsolutePath());
+		if (statusCode != StatusCode.OK)
+			statusCode = StatusCode.OK;
+		setContentType(f);
+		setContentLength(f.length());
+		try (
+			FileInputStream fin = new FileInputStream(f);
+			BufferedInputStream bin = new BufferedInputStream(fin);
+			) {
+			byte[] bytes = new byte[FILE_BUFFER_SZ];
+			int n = bin.read(bytes, 0, FILE_BUFFER_SZ);
+			while (n != -1) {
+				req.out.write(bytes, 0, n);
+				n = bin.read(bytes, 0, FILE_BUFFER_SZ);
+			}
+		}
+		catch (IOException e) {
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "unable to send file", e);
+		}
 	}
 
 	private static String getCurrentHeaderDate() {

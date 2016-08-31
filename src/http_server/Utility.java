@@ -9,6 +9,8 @@ public class Utility {
 	public static HashMap<String, RequestMethod> requestMethodMap;
 	public static HashMap<String, RequestHeaderField> requestHeaderFieldMap;
 	private static HashMap<ResponseHeaderField, String> defaultResponseHeaderField;
+	public static ArrayList<String> defaultDirectoryIndex;
+	public static MediaTypeMap MIMEType;
 	public static Charset charsetASCII;
 	public static Charset charsetUTF8;
 	public static byte[] byteNewline;
@@ -47,6 +49,9 @@ public class Utility {
 		requestHeaderFieldMap.put("user-agent", RequestHeaderField.USER_AGENT);
 		defaultResponseHeaderField = new HashMap<ResponseHeaderField, String>();
 		defaultResponseHeaderField.put(ResponseHeaderField.SERVER, HTTPServer.HEADER_FIELD_SERVER);
+		defaultDirectoryIndex = new ArrayList<String>();
+		defaultDirectoryIndex.add("index.html");
+		MIMEType = new MediaTypeMap("application/octet-stream");
 		charsetASCII = Charset.forName("US-ASCII");
 		charsetUTF8 = Charset.forName("UTF-8");
 		String newline = "\r\n";

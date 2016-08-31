@@ -24,6 +24,7 @@ public class HandlerMatcher {
 
 	public RequestHandler match(Request req) {
 		HandlerNode node = root;
+		int uriPathIndex = 0;
 		for (int i = 0; i < req.uriPath.size(); ++i) {
 			if (node.children == null)
 				break;
@@ -32,6 +33,8 @@ public class HandlerMatcher {
 			for (j = 0; j < node.children.size(); ++j) {
 				int cmp = req.uriPath.get(i).compareTo(node.children.get(j).name);
 				if (cmp == 0) {
+					if (node.children.get(j).handler != node.handler)
+						uriPathIndex = i+1;
 					node = node.children.get(j);
 					found = true;
 					break;
@@ -43,6 +46,8 @@ public class HandlerMatcher {
 			if (!found)
 				break;
 		}
+		req.uriPathIndex = uriPathIndex;
+		HTTPServer.INSTANCE.getLogger().info("Matched " + req.URI + " with " + node.handler);
 		return node.handler;
 	}
 
@@ -75,8 +80,8 @@ public class HandlerMatcher {
 		}
 	}
 
-	private void printTree() {
-		printTreeNode(System.out, root, new Stack<String>());
+	public void printTree(PrintStream out) {
+		printTreeNode(out, root, new Stack<String>());
 	}
 
 	// depth-first

@@ -13,6 +13,7 @@ public class Request {
 	public RequestMethod method = RequestMethod.INVALID;
 	public String URI = null;	// request-URI
 	public ArrayList<String> uriPath = null;
+	public int uriPathIndex = -1;
 	public final HashMap<String, String> queryParam;
 	public final HashMap<RequestHeaderField, String> headerFields;
 	public int versionMajor = 0;
@@ -31,5 +32,20 @@ public class Request {
 		catch (IOException e) {
 			// ignore
 		}
+	}
+
+	public ArrayList<String> getRelativeURIPath() {
+		if (uriPathIndex >= uriPath.size())
+			return new ArrayList<String>(0);
+		else
+			return new ArrayList<String>(uriPath.subList(uriPathIndex, uriPath.size()));
+	}
+
+	public String getRelativeURIPathStr() {
+		ArrayList<String> relPath = getRelativeURIPath();
+		if (relPath.isEmpty())
+			return "";
+		else
+			return String.join(File.separator, relPath);
 	}
 }

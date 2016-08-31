@@ -13,12 +13,10 @@ import java.util.logging.Level;
 
 public class ServerWorker implements Runnable {
 
-	private final HTTPServer server;
 	private final Request req;
 	private final Response resp;
 
-	public ServerWorker(HTTPServer server, Request req) {
-		this.server = server;
+	public ServerWorker(Request req) {
 		this.req = req;
 		this.resp = new Response(req);
 	}
@@ -30,7 +28,7 @@ public class ServerWorker implements Runnable {
 			req.in = new BufferedInputStream(req.conn.getInputStream());
 		}
 		catch (IOException e) {
-			server.getLogger().log(Level.WARNING, "unable to get socket stream", e);
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "unable to get socket stream", e);
 			req.close();
 			return;
 		}
@@ -38,7 +36,7 @@ public class ServerWorker implements Runnable {
 		try {
 			parseHeader();
 		} catch (RequestHeaderException e) {
-			server.getLogger().log(Level.WARNING, "invalid request header", e);
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "invalid request header", e);
 			// if response status code has not been set, assume Bad Request
 			if (resp.statusCode == StatusCode._UNKNOWN) {
 				resp.statusCode = StatusCode.BAD_REQUEST;
@@ -48,17 +46,17 @@ public class ServerWorker implements Runnable {
 			return;
 		}
 		catch (IOException e) {
-			server.getLogger().log(Level.WARNING, "error reading input stream", e);
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "error reading input stream", e);
 			req.close();
 			return;
 		}
 		// match to a handler
 		try {
-			server.getHandler(req).process(req, resp);
+			HTTPServer.INSTANCE.getHandler(req).process(req, resp);
 			req.out.flush();
 		}
 		catch (IOException e) {
-			server.getLogger().log(Level.WARNING, "error sending response", e);
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "error sending response", e);
 		}
 		req.close();
 	}
@@ -143,7 +141,7 @@ public class ServerWorker implements Runnable {
 				}
 			}
 			catch (UnsupportedEncodingException e) {
-				server.getLogger().log(Level.SEVERE, "unable to decode request URI", e);
+				HTTPServer.INSTANCE.getLogger().log(Level.SEVERE, "unable to decode request URI", e);
 			}
 			req.queryParam.put(pair[0], pair[1]);
 		}
