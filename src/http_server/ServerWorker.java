@@ -40,8 +40,13 @@ public class ServerWorker implements Runnable {
 			// if response status code has not been set, assume Bad Request
 			if (resp.statusCode == StatusCode._UNKNOWN) {
 				resp.statusCode = StatusCode.BAD_REQUEST;
+				try {
+					resp.send();
+				} catch (IOException ex) {
+					// ignore
+					System.out.println("unable to send");
+				}
 			}
-			// send
 			req.close();
 			return;
 		}

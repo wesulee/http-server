@@ -66,7 +66,12 @@ public class Response {
 	}
 
 	public void send() throws IOException {
-		sendHeader();
+		if (statusCode.getCode()/100 >= 4) {
+			ErrorPage.send(req, this);
+		}
+		else {
+			sendHeader();
+		}
 	}
 
 	public void send(File f) {
