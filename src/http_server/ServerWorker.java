@@ -118,7 +118,8 @@ public class ServerWorker implements Runnable {
 		}
 		// generate uriPath
 		String uriPath = uri.getPath();
-		req.uriPath = Utility.splitPath(uriPath);
+		String decodedURIPath = Utility.urlDecode(uriPath);
+		req.uriPath = Utility.splitPath(decodedURIPath);
 		// parse query
 		parseURIQuery(uri);
 	}

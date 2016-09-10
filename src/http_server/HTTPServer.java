@@ -17,6 +17,7 @@ public enum HTTPServer {
 
 	public static final String HEADER_FIELD_SERVER = "java";
 	public static final int URI_LIMIT = 10000;	// max length of a URI in request header
+	private String serverName;
 	private File root;
 	private int port;
 	private ServerSocket ss;
@@ -24,7 +25,8 @@ public enum HTTPServer {
 	private final Logger logger = Logger.getLogger(HTTPServer.class.getName());
 	private static boolean running = false;
 
-	public void init(String root, int port) throws IOException {
+	public void init(String serverName, String root, int port) throws IOException {
+		this.serverName = serverName;
 		File rootDir = new File(root);
 		logger.info("root directory: " + rootDir.getAbsolutePath());
 		if (!rootDir.isDirectory()) {
@@ -85,13 +87,21 @@ public enum HTTPServer {
 		return root;
 	}
 
+	public String getServerName() {
+		return serverName;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
 	public boolean validFileLocation(File f) {
 		return false;
 	}
 
 	public static void main(String[] args) {
 		try {
-			HTTPServer.INSTANCE.init(".", 80);
+			HTTPServer.INSTANCE.init("localhost", ".", 80);
 			String defaultContent = "<!DOCTYPE html>\n" +
 				"<html>\n" +
 				"<body>\n" +

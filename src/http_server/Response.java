@@ -74,12 +74,13 @@ public class Response {
 		}
 	}
 
-	public void send(File f) {
+	public void send(File f) throws IOException {
 		HTTPServer.INSTANCE.getLogger().log(Level.INFO, "serving file " + f.getAbsolutePath());
 		if (statusCode != StatusCode.OK)
 			statusCode = StatusCode.OK;
 		setContentType(f);
 		setContentLength(f.length());
+		sendHeader();
 		try (
 			FileInputStream fin = new FileInputStream(f);
 			BufferedInputStream bin = new BufferedInputStream(fin);
@@ -94,6 +95,27 @@ public class Response {
 		catch (IOException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "unable to send file", e);
 		}
+	}
+
+	// location should already be encoded
+	public void redirectPerm(String location) throws IOException {
+		this.statusCode = StatusCode.MOVED_PERMANENTLY;
+		headerFields.put(ResponseHeaderField.LOCATION, location);
+		setContentType(MediaType.HTML.toString());
+		StringBuilder html = new StringBuilder();
+		html.append("<!DOCTYPE html>");
+		html.append("<html>");
+		html.append("<head>");
+		html.append("<title>Moved</title>");
+		html.append("</head>");
+		html.append("<body>");
+		html.append("<h1>Moved</h1>");
+		html.append("<p>This page has been moved to");
+		Utility.makeHTMLATag(html, location);
+		html.append("</p>");
+		html.append("</body>");
+		html.append("</html>");
+		send(html.toString().getBytes(Utility.charsetASCII), MediaType.HTML.toString());
 	}
 
 	private static String getCurrentHeaderDate() {

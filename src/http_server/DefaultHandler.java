@@ -40,8 +40,14 @@ public class DefaultHandler implements RequestHandler {
 					File indexFile = getDirectoryIndex(reqFile);
 					if (indexFile == null) {
 						if (directoryListing) {
-							DirectoryListing dl = new DirectoryListing(reqFile, req.uriPath);
-							resp.send(dl.getBytes(), MediaType.HTML.toString());
+							// check if redirect needed
+							if (req.URI.charAt(req.URI.length()-1) != '/') {
+								// redirect to same page URI, now with trailing slash
+								resp.redirectPerm(Utility.getAbsURI(req.uriPath, true));
+							}
+							else {
+								resp.send(DirectoryListing.getBytes(reqFile, req.uriPath), MediaType.HTML.toString());
+							}
 						}
 						else {
 							resp.statusCode = StatusCode.NOT_FOUND;
