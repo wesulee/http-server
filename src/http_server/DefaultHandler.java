@@ -28,7 +28,7 @@ public class DefaultHandler implements RequestHandler {
 	@Override
 	public void process(Request req, Response resp) throws IOException {
 		if (resp.statusCode == StatusCode._UNKNOWN) {
-			if (req.method == RequestMethod.GET) {
+			if (Utility.methodGetOrHead(req.method)) {
 				File reqFile = new File(documentRoot, req.getRelativeURIPathStr());
 				if (!reqFile.exists()) {
 					resp.statusCode = StatusCode.NOT_FOUND;

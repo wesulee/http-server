@@ -135,6 +135,10 @@ public class Utility {
 		return uri.toString();
 	}
 
+	public static boolean methodGetOrHead(RequestMethod method) {
+		return ((method == RequestMethod.GET) || (method == RequestMethod.HEAD));
+	}
+
 	public static void init() throws UnsupportedEncodingException {
 		requestMethodMap = new HashMap<String, RequestMethod>();
 		requestMethodMap.put("GET", RequestMethod.GET);

@@ -62,6 +62,8 @@ public class Response {
 		setContentType(contentType);
 		setContentLength(content.length);
 		sendHeader();
+		if (req.method == RequestMethod.HEAD)
+			return;
 		req.out.write(content);
 	}
 
@@ -81,6 +83,8 @@ public class Response {
 		setContentType(f);
 		setContentLength(f.length());
 		sendHeader();
+		if (req.method == RequestMethod.HEAD)
+			return;
 		try (
 			FileInputStream fin = new FileInputStream(f);
 			BufferedInputStream bin = new BufferedInputStream(fin);
