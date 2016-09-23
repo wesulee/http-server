@@ -26,13 +26,13 @@ public class DefaultHandler implements RequestHandler {
 	}
 
 	@Override
-	public void process(Request req, Response resp) throws IOException {
-		if (resp.statusCode == StatusCode._UNKNOWN) {
+	public void process(Request req) throws IOException {
+		if (req.resp.statusCode == StatusCode._UNKNOWN) {
 			if (Utility.methodGetOrHead(req.method)) {
 				File reqFile = new File(documentRoot, req.getRelativeURIPathStr());
 				if (!reqFile.exists()) {
-					resp.statusCode = StatusCode.NOT_FOUND;
-					resp.send();
+					req.resp.statusCode = StatusCode.NOT_FOUND;
+					req.resp.send();
 					return;
 				}
 
@@ -43,29 +43,31 @@ public class DefaultHandler implements RequestHandler {
 							// check if redirect needed
 							if (req.URI.charAt(req.URI.length()-1) != '/') {
 								// redirect to same page URI, now with trailing slash
-								resp.redirectPerm(Utility.getAbsURI(req.uriPath, true));
+								req.resp.redirectPerm(Utility.getAbsURI(req.uriPath, true));
 							}
 							else {
-								resp.send(DirectoryListing.getBytes(reqFile, req.uriPath), MediaType.HTML.toString());
+								req.resp.send(
+									DirectoryListing.getBytes(reqFile, req.uriPath),
+									MediaType.HTML.toString()
+								);
 							}
 						}
 						else {
-							resp.statusCode = StatusCode.NOT_FOUND;
-							resp.send();
+							req.resp.statusCode = StatusCode.NOT_FOUND;
+							req.resp.send();
 						}
 					}
 					else {
-						resp.send(indexFile);
+						req.resp.send(indexFile);
 					}
 				}
 				else {
-					resp.send(reqFile);
+					req.resp.send(reqFile);
 				}
 			}
-
 		}
 		else {
-			resp.send();
+			req.resp.send();
 		}
 	}
 

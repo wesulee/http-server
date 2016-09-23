@@ -1,6 +1,6 @@
 package http_server;
 
-public class RequestHeaderException extends Exception {
+public class RequestHeaderException extends HTTPException {
 
 	public RequestHeaderException(String arg0) {
 		super(arg0);

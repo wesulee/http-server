@@ -13,15 +13,15 @@ public class StaticHandler implements RequestHandler {
 	}
 
 	@Override
-	public void process(Request req, Response resp) throws IOException {
-		if (resp.statusCode == StatusCode._UNKNOWN) {
+	public void process(Request req) throws IOException {
+		if (req.resp.statusCode == StatusCode._UNKNOWN) {
 			if (Utility.methodGetOrHead(req.method)) {
-				resp.statusCode = StatusCode.OK;
-				resp.send(content, contentType);
+				req.resp.statusCode = StatusCode.OK;
+				req.resp.send(content, contentType);
 			}
 		}
 		else {
-			resp.send();
+			req.resp.send();
 		}
 	}
 }

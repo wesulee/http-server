@@ -3,71 +3,70 @@ package http_server;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.util.Locale;
 import java.util.logging.Level;
 
 public class ServerWorker implements Runnable {
 
-	private final Request req;
-	private final Response resp;
+	private final Connection conn;
 
-	public ServerWorker(Request req) {
-		this.req = req;
-		this.resp = new Response(req);
+	public ServerWorker(Connection conn) {
+		this.conn = conn;
 	}
 
 	@Override
 	public void run() {
 		try {
-			req.out = new BufferedOutputStream(req.conn.getOutputStream());
-			req.in = new BufferedInputStream(req.conn.getInputStream());
+			conn.out = new BufferedOutputStream(conn.sock.getOutputStream());
+			conn.in = new BufferedInputStream(conn.sock.getInputStream());
 		}
 		catch (IOException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "unable to get socket stream", e);
-			req.close();
+			conn.close();
 			return;
 		}
 		// parse request
 		try {
 			parseHeader();
-		} catch (RequestHeaderException e) {
+		}
+		catch (RequestHeaderException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "invalid request header", e);
 			// if response status code has not been set, assume Bad Request
-			if (resp.statusCode == StatusCode._UNKNOWN) {
-				resp.statusCode = StatusCode.BAD_REQUEST;
+			if (conn.req.resp.statusCode == StatusCode._UNKNOWN) {
+				conn.req.resp.statusCode = StatusCode.BAD_REQUEST;
 				try {
-					resp.send();
+					conn.req.resp.send();
 				} catch (IOException ex) {
 					// ignore
 					System.out.println("unable to send");
 				}
 			}
-			req.close();
+			conn.close();
 			return;
 		}
 		catch (IOException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "error reading input stream", e);
-			req.close();
+			conn.close();
 			return;
 		}
 		// match to a handler
 		try {
-			HTTPServer.INSTANCE.getHandler(req).process(req, resp);
-			req.out.flush();
+			HTTPServer.INSTANCE.getHandler(conn.req).process(conn.req);
+			conn.out.flush();
+		}
+		catch (HTTPException e) {
+			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "error sending response", e);
 		}
 		catch (IOException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "error sending response", e);
 		}
-		req.close();
+		conn.close();
 	}
 
 	private void parseHeader() throws RequestHeaderException, IOException {
-		String line = readLine(req.in);
+		String line = Utility.readLine(conn.in);
 		int i, j;
 		// parse request method
 		i = line.indexOf(' ');
@@ -75,22 +74,21 @@ public class ServerWorker implements Runnable {
 			throw new RequestHeaderException("invalid request");
 		String requestMethodStr = line.substring(0, i);
 		RequestMethod requestMethod = Utility.requestMethodMap.get(requestMethodStr);
-		if (requestMethod == null) {
+		if (requestMethod == null)
 			throw new RequestHeaderException("invalid method: " + requestMethodStr);
-		} else {
-			req.method = requestMethod;
-		}
+		else
+			conn.req.method = requestMethod;
 		// parse URI
 		j = line.indexOf(' ', i+1);
 		if (j == -1) {
 			throw new RequestHeaderException("unable to get URI");
 		}
-		req.URI = line.substring(i+1, j);
-		if (req.URI.isEmpty()) {
+		conn.req.URI = line.substring(i+1, j);
+		if (conn.req.URI.isEmpty()) {
 			throw new RequestHeaderException("unable to get URI");
 		}
-		if (req.URI.length() > HTTPServer.URI_LIMIT) {
-			resp.statusCode = StatusCode.INTERNAL_SERVER_ERROR;
+		if (conn.req.URI.length() > HTTPServer.URI_LIMIT) {
+			conn.req.resp.statusCode = StatusCode.INTERNAL_SERVER_ERROR;
 			throw new RequestHeaderException("uri exceeds maximum allowed length");
 		}
 		parseURI();
@@ -103,15 +101,25 @@ public class ServerWorker implements Runnable {
 		}
 		// parse fields
 		parseHeaderFields();
+		// set contentLength if provided
+		String contentLengthStr = conn.req.headerFields.get(RequestHeaderField.CONTENT_LENGTH);
+		if (contentLengthStr != null) {
+			try {
+				conn.req.contentLength = Long.parseUnsignedLong(contentLengthStr);
+			}
+			catch (NumberFormatException e) {
+				throw new RequestHeaderException("invalid Content-Length value");
+			}
+		}
 	}
 
 	private void parseURI() throws RequestHeaderException {
-		if (req.URI.charAt(0) != '/') {
+		if (conn.req.URI.charAt(0) != '/') {
 			throw new RequestHeaderException("invalid URI");
 		}
 		URI uri = null;
 		try {
-			uri = new URI("http", req.URI, null);
+			uri = new URI("http", conn.req.URI, null);
 		}
 		catch (URISyntaxException e) {
 			throw new RequestHeaderException("invalid URI: " + e);
@@ -119,59 +127,10 @@ public class ServerWorker implements Runnable {
 		// generate uriPath
 		String uriPath = uri.getPath();
 		String decodedURIPath = Utility.urlDecode(uriPath);
-		req.uriPath = Utility.splitPath(decodedURIPath);
+		conn.req.uriPath = Utility.splitPath(decodedURIPath);
 		// parse query
-		parseURIQuery(uri);
-	}
-
-	private void parseURIQuery(URI uri) {
-		int i, j;
 		String uriQuery = uri.getQuery();
-		if (uriQuery == null)
-			return;
-		i = 0;
-		// [i, j) index of name=value pair
-		String[] pair;
-		while (i < uriQuery.length()) {
-			j = uriQuery.indexOf('&', i);
-			if (j == -1)
-				j = uriQuery.length();
-			String pairStr = uriQuery.substring(i, j);
-			pair = parseURIQueryPair(pairStr);
-			i = j + 1;
-			// decode
-			try {
-				pair[0] = URLDecoder.decode(pair[0], "UTF-8");
-				if (pair[1] != null) {
-					pair[1] = URLDecoder.decode(pair[1], "UTF-8");
-				}
-			}
-			catch (UnsupportedEncodingException e) {
-				HTTPServer.INSTANCE.getLogger().log(Level.SEVERE, "unable to decode request URI", e);
-			}
-			req.queryParam.put(pair[0], pair[1]);
-		}
-	}
-
-	// ret[1] is null if no value or empty value
-	private String[] parseURIQueryPair(String str) {
-		String[] ret = new String[2];
-		int i = str.indexOf('=');
-		if (i == -1) {
-			ret[0] = str;
-			ret[1] = null;
-		}
-		else {
-			ret[0] = str.substring(0, i);
-			if (i == str.length()-1) {
-				// = is last character
-				ret[1] = null;
-			}
-			else {
-				ret[1] = str.substring(i+1);
-			}
-		}
-		return ret;
+		Utility.parseURLEncodedStr(uriQuery, conn.req.queryParam);
 	}
 
 	private void parseVersion(String str) throws RequestHeaderException {
@@ -197,8 +156,8 @@ public class ServerWorker implements Runnable {
 		catch (NumberFormatException e) {
 			throw new RequestHeaderException("invalid http version: " + str);
 		}
-		req.versionMajor = major;
-		req.versionMinor = minor;
+		conn.req.versionMajor = major;
+		conn.req.versionMinor = minor;
 	}
 
 	// https://tools.ietf.org/html/rfc7230#section-3.2
@@ -210,7 +169,7 @@ public class ServerWorker implements Runnable {
 		String key = null;
 		String value = null;
 		while (true) {
-			String line = readLine(req.in);
+			String line = Utility.readLine(conn.in);
 			if (line.isEmpty())
 				break;	// end of header
 			if ((line.charAt(0) == ' ') || (line.charAt(0) == '\t')) {
@@ -255,32 +214,7 @@ public class ServerWorker implements Runnable {
 		key = key.toLowerCase(Locale.ENGLISH);
 		RequestHeaderField fieldName = Utility.requestHeaderFieldMap.get(key);
 		if (fieldName != null) {
-			req.headerFields.put(fieldName, value);
+			conn.req.headerFields.put(fieldName, value);
 		}
-	}
-
-	// reads from in until end of line (returned String excludes newline).
-	// if \r is not followed by \n, throws RequestHeaderException
-	// if input ends before newline, throws RequestHeaderException
-	private static String readLine(InputStream in) throws RequestHeaderException, IOException {
-		StringBuilder input = new StringBuilder();
-		int c;
-		while (true) {
-			c = in.read();
-			if (c == -1)
-				throw new RequestHeaderException("unexpected end of input");
-			if (c == '\r') {
-				// make sure next character is \n
-				c = in.read();
-				if (c == -1)
-					throw new RequestHeaderException("unexpected end of input");
-				else if (c != '\n')
-					throw new RequestHeaderException("invalid newline");
-				else
-					break;
-			}
-			input.append((char) c);
-		}
-		return input.toString();
 	}
 }

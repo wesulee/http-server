@@ -61,9 +61,9 @@ public enum HTTPServer {
 		running = true;
 		while (true) {
 			try {
-				Socket conn = ss.accept();
-				Request request = new Request(conn);
-				ServerWorker worker = new ServerWorker(request);
+				Socket sock = ss.accept();
+				Connection conn = new Connection(sock);
+				ServerWorker worker = new ServerWorker(conn);
 				executor.submit(worker);
 			}
 			catch (IOException e) {
@@ -119,6 +119,10 @@ public enum HTTPServer {
 					true,
 					new File(HTTPServer.INSTANCE.getRoot(), "static")
 				)
+			);
+			HTTPServer.INSTANCE.addHandler(
+				"/test/post",
+				new TestPostHandler()
 			);
 		}
 		catch (Exception e) {

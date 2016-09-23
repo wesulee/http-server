@@ -1,36 +1,35 @@
 package http_server;
 
-import java.io.*;
-import java.net.Socket;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Request {
 
-	public final Socket conn;
-	public InputStream in = null;
-	public OutputStream out = null;
+	public final Connection conn;
+	public final Response resp;
 	public RequestMethod method = RequestMethod.INVALID;
 	public String URI = null;	// request-URI
 	public ArrayList<String> uriPath = null;
 	public int uriPathIndex = -1;
 	public final HashMap<String, String> queryParam;
 	public final HashMap<RequestHeaderField, String> headerFields;
+	public PostRequest post = null;
+	public long contentLength = -1;
 	public int versionMajor = 0;
 	public int versionMinor = 0;
 
-	public Request(Socket conn) {
+	public Request(Connection conn) {
 		this.conn = conn;
+		this.resp = new Response(this);
 		this.queryParam = new HashMap<String, String>();
 		this.headerFields = new HashMap<RequestHeaderField, String>();
 	}
 
-	public void close() {
-		try {
-			conn.close();
-		}
-		catch (IOException e) {
-			// ignore
+	void parseBody() throws HTTPException, IOException {
+		if (method == RequestMethod.POST) {
+			post = new PostRequest(this);
 		}
 	}
 

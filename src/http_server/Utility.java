@@ -1,5 +1,7 @@
 package http_server;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -8,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Utility {
 
@@ -85,6 +88,53 @@ public class Utility {
 		}
 	}
 
+	// Decode a 'application/x-www-form-urlencoded' encoded string
+	//   and put key/value pairs into map.
+	public static void parseURLEncodedStr(String str, Map<String, String> map) {
+		if (str == null)
+			return;
+		int i, j;
+		i = 0;
+		// [i, j) index of name=value pair
+		String[] pair;
+		while (i < str.length()) {
+			j = str.indexOf('&', i);
+			if (j == -1)
+				j = str.length();
+			String pairStr = str.substring(i, j);
+			pair = parseURLEncodedStrPair(pairStr);
+			i = j + 1;
+			// decode
+			pair[0] = urlDecode(pair[0]);
+			if (pair[1] != null) {
+				pair[1] = urlDecode(pair[1]);
+			}
+			map.put(pair[0], pair[1]);
+		}
+	}
+
+	// helper for parseURLEncodedStr
+	// ret[1] is null if no value or empty value
+	private static String[] parseURLEncodedStrPair(String str) {
+		String[] ret = new String[2];
+		int i = str.indexOf('=');
+		if (i == -1) {
+			ret[0] = str;
+			ret[1] = null;
+		}
+		else {
+			ret[0] = str.substring(0, i);
+			if (i == str.length()-1) {
+				// = is last character
+				ret[1] = null;
+			}
+			else {
+				ret[1] = str.substring(i+1);
+			}
+		}
+		return ret;
+	}
+
 	// href should be encoded
 	public static void makeHTMLATag(StringBuilder sb, String href) {
 		sb.append("<a href=\"");
@@ -139,6 +189,43 @@ public class Utility {
 		return ((method == RequestMethod.GET) || (method == RequestMethod.HEAD));
 	}
 
+	// reads from in until end of line (returned String excludes newline).
+	// if \r is not followed by \n, throws RequestHeaderException
+	// if input ends before newline, throws RequestHeaderException
+	public static String readLine(InputStream in) throws IOException, RequestHeaderException {
+		StringBuilder input = new StringBuilder();
+		int c;
+		while (true) {
+			c = in.read();
+			if (c == -1)
+				throw new RequestHeaderException("unexpected end of input");
+			if (c == '\r') {
+				// make sure next character is \n
+				c = in.read();
+				if (c == -1)
+					throw new RequestHeaderException("unexpected end of input");
+				else if (c != '\n')
+					throw new RequestHeaderException("invalid newline");
+				else
+					break;
+			}
+			input.append((char) c);
+		}
+		return input.toString();
+	}
+
+	public static String read(InputStream in, int numBytes) throws IOException, HTTPException {
+		StringBuilder input = new StringBuilder(numBytes);
+		int c;
+		for (int i = 0; i < numBytes; ++i) {
+			c = in.read();
+			if (c == -1)
+				throw new RequestHeaderException("unexpected end of input");
+			input.append((char) c);
+		}
+		return input.toString();
+	}
+
 	public static void init() throws UnsupportedEncodingException {
 		requestMethodMap = new HashMap<String, RequestMethod>();
 		requestMethodMap.put("GET", RequestMethod.GET);
@@ -148,6 +235,7 @@ public class Utility {
 		requestHeaderFieldMap.put("connection", RequestHeaderField.CONNECTION);
 		requestHeaderFieldMap.put("cookie", RequestHeaderField.COOKIE);
 		requestHeaderFieldMap.put("content-length", RequestHeaderField.CONTENT_LENGTH);
+		requestHeaderFieldMap.put("content-type", RequestHeaderField.CONTENT_TYPE);
 		requestHeaderFieldMap.put("date", RequestHeaderField.DATE);
 		requestHeaderFieldMap.put("host", RequestHeaderField.HOST);
 		requestHeaderFieldMap.put("referer", RequestHeaderField.REFERER);

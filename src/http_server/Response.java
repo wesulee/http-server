@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
+import http_server.html.Builder;
+
 public class Response {
 
 	private static final int FILE_BUFFER_SZ = 8*1024;
@@ -31,10 +33,10 @@ public class Response {
 			sb.append(": ");
 			sb.append(entry.getValue());
 			String str = sb.toString();
-			req.out.write(str.getBytes(Utility.charsetASCII));
-			req.out.write(Utility.byteNewline);
+			req.conn.out.write(str.getBytes(Utility.charsetASCII));
+			req.conn.out.write(Utility.byteNewline);
 		}
-		req.out.write(Utility.byteNewline);
+		req.conn.out.write(Utility.byteNewline);
 	}
 
 	private void sendHeaderStatusLine() throws IOException {
@@ -42,8 +44,8 @@ public class Response {
 		sb.append("HTTP/1.0 ");
 		sb.append(statusCode);
 		String str = sb.toString();
-		req.out.write(str.getBytes(Utility.charsetASCII));
-		req.out.write(Utility.byteNewline);
+		req.conn.out.write(str.getBytes(Utility.charsetASCII));
+		req.conn.out.write(Utility.byteNewline);
 	}
 
 	public void setContentType(String type) {
@@ -64,7 +66,7 @@ public class Response {
 		sendHeader();
 		if (req.method == RequestMethod.HEAD)
 			return;
-		req.out.write(content);
+		req.conn.out.write(content);
 	}
 
 	public void send() throws IOException {
@@ -92,13 +94,20 @@ public class Response {
 			byte[] bytes = new byte[FILE_BUFFER_SZ];
 			int n = bin.read(bytes, 0, FILE_BUFFER_SZ);
 			while (n != -1) {
-				req.out.write(bytes, 0, n);
+				req.conn.out.write(bytes, 0, n);
 				n = bin.read(bytes, 0, FILE_BUFFER_SZ);
 			}
 		}
 		catch (IOException e) {
 			HTTPServer.INSTANCE.getLogger().log(Level.WARNING, "unable to send file", e);
 		}
+	}
+
+	public void send(Builder html) throws IOException {
+		send(
+			html.getHTML().getBytes(Utility.charsetUTF8),
+			MediaType.HTML.toString()
+		);
 	}
 
 	// location should already be encoded
